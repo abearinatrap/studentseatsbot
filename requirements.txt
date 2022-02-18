@@ -1,0 +1,6 @@
+###### Requirements without Version Specifiers ######
+requests
+sys
+winsound
+bs4
+pandas
