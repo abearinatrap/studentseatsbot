@@ -3,6 +3,8 @@
 
 name: Python application
 
+concurrency: production
+
 on:
   push:
     branches: [ master ]
