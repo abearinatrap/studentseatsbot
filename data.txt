@@ -1,0 +1,2 @@
+Want to track ticket prices, length of ticket uptime.
+So for each ticket we find, we want to save Seller, price, and Time of data point
