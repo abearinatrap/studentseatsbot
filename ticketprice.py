@@ -8,7 +8,7 @@ from pymongo.errors import ConnectionFailure
 from datetime import datetime
 
 STUDENT_SEATS_SITE="https://studentseats.com"
-MONGO_URL="mongodb://localhost:27017"
+MONGO_URL="add_HERE"
 MONGO_DATABASE="ticket"
 
 mongo_client=None
@@ -16,7 +16,8 @@ mongo_db=None
 mongo_col=None 
 
 def connectDb():
-    if mongo_client == None:
+    global mongo_client
+    if mongo_client is None:
         mongo_client=MongoClient(MONGO_URL)
     try:
         mongo_client.admin.command('ping')
@@ -27,15 +28,18 @@ def connectDb():
     mongo_db=mongo_client[MONGO_DATABASE]
 
 def getSite():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    #os.system('cls' if os.name == 'nt' else 'clear')
+    return "https://studentseats.com/Forum/Topic/1"
     found_valid=False
     print("Finding latest tickets page ...")
     #not sure what happens when goes past range of (home) games 
-    for i in reversed(range(12)):
-            rr=requests.get(STUDENT_SEATS_SITE+"/Forum/Topic/"+str(i))
-            if not (rr.url==STUDENT_SEATS_SITE):
-                found_valid=True
-                break
+    for i in range(1,10):
+        rr=requests.get(STUDENT_SEATS_SITE+"/Forum/Topic/"+str(i))
+        print("try "+str(i))
+        if not (rr.url==STUDENT_SEATS_SITE):
+            found_valid=True
+            break
+        
     if not found_valid:
         print("No student tickets are currently availible to buy/sell")
         exit()
@@ -48,18 +52,21 @@ def stripSpaceArray(arr):
             arr[input][i]=''.join(arr[input][i].split())
 
 def requestSite(url):
+    print("requesting "+url)
     r = requests.get(url)
-    os.system('cls' if os.name == 'nt' else 'clear')
+    #os.system('cls' if os.name == 'nt' else 'clear')
     
     if r.status_code == 200:
         soup = BeautifulSoup(r.content, "html.parser")
-        table=soup.find('table',{'id':'forumIndexTable'})
-
+        table=soup.find('div',{'class':'ticketsContainer'})
+        print(table)
         new_table = []
-        for row in table.find_all('tr')[1:]:
+        for row in table.find_all('div')[1:]:
             column_marker = 0
-            columns = row.find_all('td')
-            new_table.append([column.get_text() for column in columns])
+            columns = row.find_all('div')
+            columns2= [x for x in columns if x.get_text()]
+            new_table.append([column.get_text() for column in columns2])
+        print(new_table)
         df = DataFrame(new_table, columns=['Seller','Price','Section','Availibility','Ticket Button'])
         stripSpaceArray(df)
     else:
@@ -79,8 +86,8 @@ if __name__ == "__main__":
     maxPrice= pArgs[1]
     bowl= pArgs[2]
     standard_out+="Looking for "+bowl+" bowl tickets under $"+maxPrice
-    
-    connectDb()
+    standard_out+="\n"+ticket_request_url+"\n"
+    #connectDb()
     if not mongo_client==None:
         #current collection name is the url of the ticket page
         mongo_col=mongo_db[ticket_request_url]
@@ -88,6 +95,7 @@ if __name__ == "__main__":
     while True:  
         df=requestSite(ticket_request_url)
         print(standard_out)
+        ticket_found=False
         if not df==False:
             page_links=[]
             #links of ticket postings
