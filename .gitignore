@@ -15,3 +15,4 @@ build/ticketprice/xref-ticketprice.html
 .env
 build/*
 venv/
+output/*

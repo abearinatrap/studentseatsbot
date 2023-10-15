@@ -5,6 +5,15 @@ from pandas import DataFrame
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
+from re import sub
+from decimal import Decimal
+from datetime import datetime, timezone
+import json
+import time
+import signal
+import sys
+
+
 STUDENT_SEATS_SITE="https://studentseats.com"
 DELIM="/"
 MONGO_URL="add_HERE"
@@ -29,8 +38,8 @@ def connectDb():
 
 def getSite(school="Alabama", sport="Football"):
     #os.system('cls' if os.name == 'nt' else 'clear')
-    return "https://studentseats.com/OhioState/OhioState-PennState-tickets?id=894"
-    print("Finding latest tickets page ...")
+    #return "https://studentseats.com/OhioState/OhioState-PennState-tickets?id=894"
+    #print("Finding latest tickets page ...")
     rr=requests.get(STUDENT_SEATS_SITE+DELIM+school)
     soup = BeautifulSoup(rr.content, "html.parser")
     table=soup.find('div',{'id':sport})
@@ -57,36 +66,84 @@ def requestSite(url):
         if table is None:
             return False
         #print(table)
-        print("########################################")
+        #print("########################################")
         new_table = []
         
         for row in table.find_all('div',{'class':'card-element'}):
             info = row.find_all('div', {'class': 'ticket-info-group'})
+            if info is None:
+                continue
             # username
             username = info[0].find('span',{'class':'ticket-username'})
-            print('username', username.text.strip())
+            #print('username', username.text.strip())
 
             # section info
             section_data = info[1].find_all('span')
             section_info = ' '.join(i.text for i in section_data)
-            print("section info: ", section_info)
+            #print("section info: ", section_info)
 
             # price
             money = info[2].find('span')
-            print('money', money.text.strip())
+            #print('money', money.text.strip())
 
-            print("################")
+            #print("################")
+            #Decimal(sub(r'[^\d.]', '', money.text.strip()))
+            new_table.append({  "Seller":username.text.strip(),
+                                "Price":float(sub(r'[^\d.]', '', money.text.strip())),
+                                'section_info':section_info})
         #print(new_table)
-        df = DataFrame(new_table, columns=['Seller','Price','Section','Availibility','Ticket Button'])
+        df = DataFrame(new_table, columns=['Seller','Price','section_info'])
+        #print(df)
         #stripSpaceArray(df)
     else:
         return False
     return df
 
+def getStats(frame, time):
+    data = {
+            'date': int(time),
+            'mean': frame.loc[:, 'Price'].mean(),
+            'median': frame.loc[:, 'Price'].median(),
+            'stddev': frame.loc[:, 'Price'].std(),
+            'min': float(frame.loc[:, 'Price'].min()),
+            'max': float(frame.loc[:, 'Price'].max()),
+            'size': frame.loc[:, 'Price'].size
+            }
+    return data
+
+def writeData(data):
+    filename = str(time_now)+".json"
+    with open("output/"+filename, "w") as f:
+        f.write(json.dumps(data))
+
 if __name__ == "__main__":
     pArgs = sys.argv
-    
+
+    data = []
+    count = 0
+
+    def signal_handler(sig, frame):
+        print('You pressed Ctrl+C!')
+        writeData(data)
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     game = getSite()
     print(game)
-    requestSite(game)
+
+    while True:
+        frame = requestSite(game)
+
+        time_now = int(datetime.now(timezone.utc).timestamp())
+        sections = [x for _, x in frame.groupby(['section_info'])]
+        for s in sections:
+            s = getStats(s,time_now)
+            print(s)
+            data.append(s)
         
+        if len(data)>500:
+            writeData(data)
+            data.clear()
+           
+        time.sleep(2)
