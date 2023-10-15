@@ -1,6 +1,5 @@
 import requests
 import sys
-import os
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 from pymongo import MongoClient
@@ -29,7 +28,7 @@ def connectDb():
 
 def getSite():
     #os.system('cls' if os.name == 'nt' else 'clear')
-    return "https://studentseats.com/Forum/Topic/1"
+    return "https://studentseats.com/Forum/Topic/2"
     found_valid=False
     print("Finding latest tickets page ...")
     #not sure what happens when goes past range of (home) games 
@@ -59,16 +58,19 @@ def requestSite(url):
     if r.status_code == 200:
         soup = BeautifulSoup(r.content, "html.parser")
         table=soup.find('div',{'class':'ticketsContainer'})
-        print(table)
+        #print(table)
+        print("########################################")
         new_table = []
-        for row in table.find_all('div')[1:]:
+        for row in table.find_all('div',{'class':'row flex'})[1:]:
             column_marker = 0
             columns = row.find_all('div')
+            print(columns)
+            print("######")
             columns2= [x for x in columns if x.get_text()]
             new_table.append([column.get_text() for column in columns2])
-        print(new_table)
+        #print(new_table)
         df = DataFrame(new_table, columns=['Seller','Price','Section','Availibility','Ticket Button'])
-        stripSpaceArray(df)
+        #stripSpaceArray(df)
     else:
         return False
     return df
@@ -96,7 +98,7 @@ if __name__ == "__main__":
         df=requestSite(ticket_request_url)
         print(standard_out)
         ticket_found=False
-        if not df==False:
+        if not df.empty:
             page_links=[]
             #links of ticket postings
             post_links=[]
