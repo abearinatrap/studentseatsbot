@@ -133,17 +133,22 @@ if __name__ == "__main__":
     print(game)
 
     while True:
-        frame = requestSite(game)
+        try:
+            frame = requestSite(game)
 
-        time_now = int(datetime.now(timezone.utc).timestamp())
-        sections = [x for _, x in frame.groupby(['section_info'])]
-        for s in sections:
-            s = getStats(s,time_now)
-            print(s)
-            data.append(s)
-        
-        if len(data)>500:
+            time_now = int(datetime.now(timezone.utc).timestamp())
+            sections = [x for _, x in frame.groupby(['section_info'])]
+            for s in sections:
+                s = getStats(s,time_now)
+                print(s)
+                data.append(s)
+            
+            if len(data)>500:
+                writeData(data)
+                data.clear()
+            
+            time.sleep(2)
+        except Exception as e:
+            print(e)
             writeData(data)
-            data.clear()
-           
-        time.sleep(2)
+            sys.exit(1)
