@@ -109,11 +109,16 @@ def getStats(frame, time):
             'max': float(frame.loc[:, 'Price'].max()),
             'size': frame.loc[:, 'Price'].size
             }
+    
+    if frame.size > 0 :
+        #section = 0
+        section =  0 if "Lower" in frame.iloc[0]['section_info'] else 1
+        data['section'] = section
     return data
 
 def writeData(data):
     filename = str(time_now)+".json"
-    with open("output/"+filename, "w") as f:
+    with open("/mnt/drive/ssoutput/"+filename, "w") as f:
         f.write(json.dumps(data))
 
 if __name__ == "__main__":
@@ -131,17 +136,29 @@ if __name__ == "__main__":
 
     game = getSite()
     print(game)
-
+    # last frame, compare
+    p_sections = []
     while True:
         try:
             frame = requestSite(game)
-
+            if frame is False:
+                time.sleep(2)
+                continue
             time_now = int(datetime.now(timezone.utc).timestamp())
             sections = [x for _, x in frame.groupby(['section_info'])]
             for s in sections:
-                s = getStats(s,time_now)
-                print(s)
-                data.append(s)
+                sa = getStats(s,time_now)
+                # print(sa)
+                if len(p_sections) < sa['section']+1:
+                    p_sections.append(sa)
+                else:
+                    diffkeys = [k for k in sa if p_sections[sa['section']][k] != sa[k]]
+                    if len(diffkeys)>1:
+                        data.append(sa)
+                        p_sections[sa['section']] = sa
+                        print("diff append") 
+                    else:
+                        print(str(time_now), "have not changed", end=". ")
             
             if len(data)>500:
                 writeData(data)
@@ -149,6 +166,8 @@ if __name__ == "__main__":
             
             time.sleep(2)
         except Exception as e:
-            print(e)
+            import traceback
+            traceback.print_exc()
+            print(str(e))
             writeData(data)
             sys.exit(1)
