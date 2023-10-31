@@ -104,7 +104,7 @@ def getStats(frame, time):
             'date': int(time),
             'mean': frame.loc[:, 'Price'].mean(),
             'median': frame.loc[:, 'Price'].median(),
-            'stddev': frame.loc[:, 'Price'].std(),
+            'stddev': frame.loc[:, 'Price'].std(ddof=1),
             'min': float(frame.loc[:, 'Price'].min()),
             'max': float(frame.loc[:, 'Price'].max()),
             'size': frame.loc[:, 'Price'].size
@@ -118,7 +118,7 @@ def getStats(frame, time):
 
 def writeData(data):
     filename = str(time_now)+".json"
-    with open("/mnt/drive/ssoutput/"+filename, "w") as f:
+    with open("output/"+filename, "w") as f:
         f.write(json.dumps(data))
 
 if __name__ == "__main__":
@@ -151,15 +151,47 @@ if __name__ == "__main__":
                 # print(sa)
                 if len(p_sections) < sa['section']+1:
                     p_sections.append(sa)
+                    data.append(sa)
                 else:
                     diffkeys = [k for k in sa if p_sections[sa['section']][k] != sa[k]]
                     if len(diffkeys)>1:
                         data.append(sa)
                         p_sections[sa['section']] = sa
-                        print("diff append") 
+                        print("diff append", str(sa['section'])) 
                     else:
                         print(str(time_now), "have not changed", end=". ")
             
+            # what if no tickets for one section
+            ### start shit
+            if len(sections) == 1:
+                frame = sections[0]
+                ## reverse because the one we have is the one we doesnt'
+                section =  1 if "Lower" in frame.iloc[0]['section_info'] else 0
+                sa = {
+                    'date': int(time_now),
+                    'size': 0,
+                    'mean': 0,
+                    'median': 0,
+                    'stddev': 0,
+                    'min': 0,
+                    'max': 0,
+                    'section': section
+                    }
+                
+                if len(p_sections) < sa['section']+1:
+                    p_sections.append(sa)
+                    data.append(sa)
+                else:
+                    diffkeys = [k for k in sa if p_sections[sa['section']][k] != sa[k]]
+                    if len(diffkeys)>1:
+                        data.append(sa)
+                        p_sections[sa['section']] = sa
+                        print("diff append", str(sa['section'])) 
+                    else:
+                        print(str(time_now), "have not changed", end=". ")
+                
+            ### end shit
+
             if len(data)>500:
                 writeData(data)
                 data.clear()

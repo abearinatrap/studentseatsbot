@@ -16,3 +16,4 @@ build/ticketprice/xref-ticketprice.html
 build/*
 venv/
 output/*
+.DS_Store
